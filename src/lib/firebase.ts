@@ -77,3 +77,21 @@ export async function getPriceEntries(): Promise<PriceEntry[]> {
         return [];
     }
 }
+
+export async function deletePriceEntry(id: string) {
+    if (isMock) {
+        console.log("Using Mock DB for deletePriceEntry");
+        const existing = JSON.parse(localStorage.getItem(MOCK_STORAGE_KEY) || "[]");
+        const filtered = existing.filter((e: any) => e.id !== id);
+        localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(filtered));
+        return;
+    }
+
+    try {
+        const { doc, deleteDoc } = await import("firebase/firestore");
+        await deleteDoc(doc(db, "prices", id));
+    } catch (e) {
+        console.error("Error deleting document: ", e);
+        throw e;
+    }
+}

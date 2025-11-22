@@ -13,23 +13,39 @@ import {
     ResponsiveContainer,
     Cell,
 } from "recharts";
-import { PriceEntry, getPriceEntries } from "@/lib/firebase";
+import { PriceEntry, getPriceEntries, deletePriceEntry } from "@/lib/firebase";
 import { BRANDS } from "@/data/constants";
-import { Loader2, TrendingUp, DollarSign, Package } from "lucide-react";
+import { Loader2, TrendingUp, DollarSign, Package, Trash2 } from "lucide-react";
 
 export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }) {
     const [entries, setEntries] = useState<PriceEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const fetchData = async () => {
+        setLoading(true);
+        const data = await getPriceEntries();
+        setEntries(data);
+        setLoading(false);
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            const data = await getPriceEntries();
-            setEntries(data);
-            setLoading(false);
-        };
         fetchData();
     }, [refreshTrigger]);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Tem certeza que deseja excluir este registro?")) return;
+        setDeletingId(id);
+        try {
+            await deletePriceEntry(id);
+            await fetchData();
+        } catch (error) {
+            console.error("Error deleting:", error);
+            alert("Erro ao excluir registro.");
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     // Calculate Average Prices by Family
     const familyStats = entries.reduce((acc, entry) => {
@@ -37,7 +53,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
             acc[entry.family] = {
                 family: entry.family,
                 count: 0,
-                totals: { Guerra: 0, Randon: 0, Facchini: 0, Librelato: 0 },
+                totals: { Guerra: 0, Randon: 0, Facchini: 0, Librelato: 0, Truckvan: 0, Outros: 0 },
             };
         }
 
@@ -63,7 +79,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
         return item;
     });
 
-    if (loading) {
+    if (loading && entries.length === 0) {
         return (
             <div className="flex justify-center p-12">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -168,6 +184,8 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                             <Bar dataKey="Randon" fill="#000000" name="Randon" radius={[4, 4, 0, 0]} />
                             <Bar dataKey="Facchini" fill="#DC2626" name="Facchini" radius={[4, 4, 0, 0]} />
                             <Bar dataKey="Librelato" fill="#2563EB" name="Librelato" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Truckvan" fill="#F97316" name="Truckvan" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Outros" fill="#9333EA" name="Outros" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -188,6 +206,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                                 <th className="px-6 py-4 font-medium">Randon</th>
                                 <th className="px-6 py-4 font-medium">Facchini</th>
                                 <th className="px-6 py-4 font-medium">Librelato</th>
+                                <th className="px-6 py-4 font-medium">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -206,6 +225,20 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                                     </td>
                                     <td className="px-6 py-4">
                                         {entry.prices.Librelato ? `R$ ${entry.prices.Librelato.toLocaleString()}` : '-'}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={() => entry.id && handleDelete(entry.id)}
+                                            disabled={deletingId === entry.id}
+                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                            title="Excluir registro"
+                                        >
+                                            {deletingId === entry.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                            )}
+                                        </button>
                                     </td>
                                 </tr>
                             ))}

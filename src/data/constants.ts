@@ -27,7 +27,7 @@ export const DISTRIBUTORS = [
     "GREENVALE",
 ].sort();
 
-export const BRANDS = ["Guerra", "Randon", "Facchini", "Librelato"] as const;
+export const BRANDS = ["Guerra", "Randon", "Facchini", "Librelato", "Truckvan", "Outros"] as const;
 
 export type Product = {
     name: string;

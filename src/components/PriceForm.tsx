@@ -141,16 +141,13 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
                                 )}
                             </label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-medium">
-                                    R$
-                                </span>
                                 <input
                                     type="text"
                                     placeholder="0,00"
                                     value={prices[brand] || ""}
                                     onChange={(e) => handlePriceChange(brand, e.target.value)}
                                     className={cn(
-                                        "w-full pl-12 p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 outline-none transition-all font-medium",
+                                        "w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 outline-none transition-all font-medium",
                                         brand === "Guerra"
                                             ? "focus:ring-blue-500 border-blue-200 dark:border-blue-900/30"
                                             : "focus:ring-purple-500"
