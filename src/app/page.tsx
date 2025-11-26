@@ -7,12 +7,23 @@ import RecentRecordsTable from "@/components/RecentRecordsTable";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { PriceEntry, getPriceEntries } from "@/lib/firebase";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut, KeyRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [entries, setEntries] = useState<PriceEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,12 +69,39 @@ export default function Home() {
             >
               Sistema de inteligência de mercado para monitoramento de preços de implementos rodoviários.
             </motion.p>
+
+            {user && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center justify-center md:justify-start gap-4 pt-4"
+              >
+                <div className="text-zinc-600">
+                  Olá, <span className="font-bold text-zinc-900">{user.username}</span>
+                </div>
+                <div className="h-4 w-px bg-zinc-300" />
+                <Link
+                  href="/change-password"
+                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-[#FACC15] transition-colors"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  Trocar Senha
+                </Link>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </button>
+              </motion.div>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      {loading && entries.length === 0 ? (
+      {authLoading || (loading && entries.length === 0) ? (
         <div className="flex justify-center p-12">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>

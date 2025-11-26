@@ -9,8 +9,11 @@ import { cn } from "@/lib/utils";
 
 import Image from "next/image";
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
-    const [distributor, setDistributor] = useState("");
+    const { user } = useAuth();
+    const distributor = user?.username || "";
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [prices, setPrices] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -87,20 +90,12 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
                         Distribuidor
                     </label>
                     <div className="relative">
-                        <select
-                            required
+                        <input
+                            type="text"
                             value={distributor}
-                            onChange={(e) => setDistributor(e.target.value)}
-                            className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#FACC15] outline-none appearance-none transition-all"
-                        >
-                            <option value="">Selecione um distribuidor...</option>
-                            {DISTRIBUTORS.map((d) => (
-                                <option key={d} value={d}>
-                                    {d}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                            disabled
+                            className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-500 font-medium cursor-not-allowed"
+                        />
                     </div>
                 </div>
 

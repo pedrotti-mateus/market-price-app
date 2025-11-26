@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, Timestamp, where, setDoc, doc, updateDoc } from "firebase/firestore";
 
 // REPLACE WITH YOUR FIREBASE CONFIG
 const firebaseConfig = {
@@ -92,6 +92,106 @@ export async function deletePriceEntry(id: string) {
         await deleteDoc(doc(db, "prices", id));
     } catch (e) {
         console.error("Error deleting document: ", e);
+        throw e;
+    }
+}
+
+// --- AUTHENTICATION ---
+
+export interface User {
+    id: string;
+    username: string; // Distributor Name or "ADMIN"
+    password?: string; // In a real app, hash this!
+    role: "ADMIN" | "DISTRIBUTOR";
+}
+
+const USERS_COLLECTION = "users";
+const MOCK_USERS_KEY = "market_prices_users_db";
+
+import { DISTRIBUTORS } from "@/data/constants";
+
+export async function seedUsers() {
+    // Check if users exist, if not, create them
+    const defaultPassword = "123456";
+
+    const usersToSeed: User[] = [
+        { id: "admin", username: "ADMIN", role: "ADMIN", password: defaultPassword },
+        ...DISTRIBUTORS.map(d => ({
+            id: d.toLowerCase().replace(/\s+/g, '-'),
+            username: d,
+            role: "DISTRIBUTOR" as const,
+            password: defaultPassword
+        }))
+    ];
+
+    if (isMock) {
+        const existing = localStorage.getItem(MOCK_USERS_KEY);
+        if (!existing) {
+            console.log("Seeding Mock Users...");
+            localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(usersToSeed));
+        }
+        return;
+    }
+
+    // Firebase seeding (check one user to see if we need to seed)
+    try {
+        const q = query(collection(db, USERS_COLLECTION), where("username", "==", "ADMIN"));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            console.log("Seeding Firebase Users...");
+            for (const user of usersToSeed) {
+                // Use username as ID for simplicity in this specific use case or generate one
+                await setDoc(doc(db, USERS_COLLECTION, user.id), user);
+            }
+        }
+    } catch (e) {
+        console.error("Error seeding users:", e);
+    }
+}
+
+export async function login(username: string, password: string): Promise<User | null> {
+    if (isMock) {
+        const users: User[] = JSON.parse(localStorage.getItem(MOCK_USERS_KEY) || "[]");
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
+            const { password, ...safeUser } = user;
+            return safeUser as User;
+        }
+        return null;
+    }
+
+    try {
+        const q = query(collection(db, USERS_COLLECTION), where("username", "==", username));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) return null;
+
+        const userDoc = snapshot.docs[0].data() as User;
+        if (userDoc.password === password) {
+            const { password, ...safeUser } = userDoc;
+            return { ...safeUser, id: snapshot.docs[0].id };
+        }
+        return null;
+    } catch (e) {
+        console.error("Login error:", e);
+        return null;
+    }
+}
+
+export async function changePassword(userId: string, newPassword: string) {
+    if (isMock) {
+        const users: User[] = JSON.parse(localStorage.getItem(MOCK_USERS_KEY) || "[]");
+        const updatedUsers = users.map(u => u.id === userId ? { ...u, password: newPassword } : u);
+        localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(updatedUsers));
+        return;
+    }
+
+    try {
+        const userRef = doc(db, USERS_COLLECTION, userId);
+        await updateDoc(userRef, { password: newPassword });
+    } catch (e) {
+        console.error("Change password error:", e);
         throw e;
     }
 }
