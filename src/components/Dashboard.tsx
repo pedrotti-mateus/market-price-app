@@ -15,36 +15,39 @@ import {
 } from "recharts";
 import { PriceEntry, getPriceEntries, deletePriceEntry } from "@/lib/firebase";
 import { BRANDS } from "@/data/constants";
-import { Loader2, TrendingUp, DollarSign, Package, Trash2 } from "lucide-react";
+import { TrendingUp, DollarSign, Package, Download, Filter } from "lucide-react";
+import * as XLSX from 'xlsx';
 
-export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }) {
-    const [entries, setEntries] = useState<PriceEntry[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [deletingId, setDeletingId] = useState<string | null>(null);
+export default function Dashboard({ entries }: { entries: PriceEntry[] }) {
+    const [selectedFamily, setSelectedFamily] = useState<string>("Todas");
 
-    const fetchData = async () => {
-        setLoading(true);
-        const data = await getPriceEntries();
-        setEntries(data);
-        setLoading(false);
-    };
+    const handleExport = () => {
+        const dataToExport = entries.map(e => {
+            let dateStr = "-";
+            if (e.createdAt) {
+                // Handle Firebase Timestamp or Date/String
+                const date = e.createdAt.toDate ? e.createdAt.toDate() : new Date(e.createdAt);
+                dateStr = date.toLocaleDateString("pt-BR");
+            }
 
-    useEffect(() => {
-        fetchData();
-    }, [refreshTrigger]);
+            return {
+                Data: dateStr,
+                Distribuidor: e.distributor,
+                Produto: e.product,
+                Família: e.family,
+                Guerra: e.prices.Guerra || 0,
+                Randon: e.prices.Randon || 0,
+                Facchini: e.prices.Facchini || 0,
+                Librelato: e.prices.Librelato || 0,
+                Truckvan: e.prices.Truckvan || 0,
+                Outros: e.prices.Outros || 0,
+            };
+        });
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Tem certeza que deseja excluir este registro?")) return;
-        setDeletingId(id);
-        try {
-            await deletePriceEntry(id);
-            await fetchData();
-        } catch (error) {
-            console.error("Error deleting:", error);
-            alert("Erro ao excluir registro.");
-        } finally {
-            setDeletingId(null);
-        }
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Preços");
+        XLSX.writeFile(wb, "monitoramento_precos.xlsx");
     };
 
     // Calculate Average Prices by Family
@@ -79,13 +82,11 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
         return item;
     });
 
-    if (loading && entries.length === 0) {
-        return (
-            <div className="flex justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-        );
-    }
+    const families = ["Todas", ...new Set(entries.map(e => e.family))];
+
+    const filteredChartData = selectedFamily === "Todas"
+        ? chartData
+        : chartData.filter(item => item.name === selectedFamily);
 
     if (entries.length === 0) {
         return (
@@ -103,7 +104,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200"
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
@@ -120,7 +121,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200"
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-purple-100 text-purple-600 rounded-xl">
@@ -137,7 +138,7 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200"
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-green-100 text-green-600 rounded-xl">
@@ -157,12 +158,35 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800"
+                className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-200"
             >
-                <h3 className="text-lg font-bold mb-6">Média de Preços por Família</h3>
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h3 className="text-lg font-bold">Média de Preços por Família</h3>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                            <select
+                                value={selectedFamily}
+                                onChange={(e) => setSelectedFamily(e.target.value)}
+                                className="pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-[#D32F2F] outline-none appearance-none"
+                            >
+                                {families.map(f => (
+                                    <option key={f} value={f}>{f}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                        >
+                            <Download className="w-4 h-4" />
+                            Exportar Excel
+                        </button>
+                    </div>
+                </div>
                 <div className="h-[400px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <BarChart data={filteredChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#33333320" />
                             <XAxis dataKey="name" stroke="#888" fontSize={12} tickMargin={10} />
                             <YAxis
@@ -191,61 +215,6 @@ export default function Dashboard({ refreshTrigger }: { refreshTrigger: number }
                 </div>
             </motion.div>
 
-            {/* Recent Entries Table */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold">Registros Recentes</h3>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500">
-                            <tr>
-                                <th className="px-6 py-4 font-medium">Distribuidor</th>
-                                <th className="px-6 py-4 font-medium">Produto</th>
-                                <th className="px-6 py-4 font-medium">Guerra</th>
-                                <th className="px-6 py-4 font-medium">Randon</th>
-                                <th className="px-6 py-4 font-medium">Facchini</th>
-                                <th className="px-6 py-4 font-medium">Librelato</th>
-                                <th className="px-6 py-4 font-medium">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                            {entries.slice(0, 10).map((entry, i) => (
-                                <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                    <td className="px-6 py-4 font-medium">{entry.distributor}</td>
-                                    <td className="px-6 py-4 text-zinc-500">{entry.product}</td>
-                                    <td className="px-6 py-4 text-blue-600 font-medium">
-                                        {entry.prices.Guerra ? `R$ ${entry.prices.Guerra.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {entry.prices.Randon ? `R$ ${entry.prices.Randon.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {entry.prices.Facchini ? `R$ ${entry.prices.Facchini.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {entry.prices.Librelato ? `R$ ${entry.prices.Librelato.toLocaleString()}` : '-'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => entry.id && handleDelete(entry.id)}
-                                            disabled={deletingId === entry.id}
-                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                            title="Excluir registro"
-                                        >
-                                            {deletingId === entry.id ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <Trash2 className="w-4 h-4" />
-                                            )}
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     );
 }
