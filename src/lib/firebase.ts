@@ -210,10 +210,23 @@ export async function uploadFile(file: File): Promise<string> {
         });
     }
 
+    console.log("Starting file upload...", file.name);
     try {
-        const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+        // Create a timeout promise
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Upload timed out")), 30000)
+        );
+
+        const uploadTask = async () => {
+            const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            return downloadURL;
+        };
+
+        // Race between upload and timeout
+        const downloadURL = await Promise.race([uploadTask(), timeout]) as string;
+        console.log("File uploaded successfully:", downloadURL);
         return downloadURL;
     } catch (e) {
         console.error("Error uploading file:", e);

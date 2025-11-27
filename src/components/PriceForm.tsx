@@ -80,9 +80,10 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
             // Keep distributor selected for convenience
             setTimeout(() => setSuccess(false), 3000);
             if (onSuccess) onSuccess();
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert("Erro ao salvar dados. Tente novamente.");
+            const msg = error?.message || "Erro desconhecido";
+            alert(`Erro ao salvar dados: ${msg}. Tente novamente.`);
         } finally {
             setLoading(false);
         }
