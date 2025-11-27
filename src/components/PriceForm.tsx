@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { DISTRIBUTORS, PRODUCTS, BRANDS, Product } from "@/data/constants";
-import { addPriceEntry, uploadFile } from "@/lib/firebase";
+import { addPriceEntry, uploadEvidence } from "@/lib/firebase";
 import { Check, ChevronDown, Loader2, Paperclip, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +61,7 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
             // Upload evidence files
             const evidenceUrls: Record<string, string> = {};
             for (const [brand, file] of Object.entries(evidenceFiles)) {
-                const url = await uploadFile(file);
+                const url = await uploadEvidence(file);
                 evidenceUrls[brand] = url;
             }
 

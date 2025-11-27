@@ -200,7 +200,7 @@ export async function changePassword(userId: string, newPassword: string) {
     }
 }
 
-export async function uploadFile(file: File): Promise<string> {
+export async function uploadEvidence(file: File): Promise<string> {
     if (isMock) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -210,23 +210,10 @@ export async function uploadFile(file: File): Promise<string> {
         });
     }
 
-    console.log("Starting file upload...", file.name);
     try {
-        // Create a timeout promise
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Upload timed out")), 30000)
-        );
-
-        const uploadTask = async () => {
-            const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            return downloadURL;
-        };
-
-        // Race between upload and timeout
-        const downloadURL = await Promise.race([uploadTask(), timeout]) as string;
-        console.log("File uploaded successfully:", downloadURL);
+        const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
         return downloadURL;
     } catch (e) {
         console.error("Error uploading file:", e);
