@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { DISTRIBUTORS, PRODUCTS, BRANDS, Product } from "@/data/constants";
-import { addPriceEntry } from "@/lib/firebase";
-import { Check, ChevronDown, Loader2 } from "lucide-react";
+import { addPriceEntry, uploadFile } from "@/lib/firebase";
+import { Check, ChevronDown, Loader2, Paperclip, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import Image from "next/image";
@@ -16,6 +16,7 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
     const distributor = user?.username || "";
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [prices, setPrices] = useState<Record<string, string>>({});
+    const [evidenceFiles, setEvidenceFiles] = useState<Record<string, File>>({});
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
@@ -29,6 +30,16 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
     const handlePriceChange = (brand: string, value: string) => {
         const formatted = formatCurrency(value);
         setPrices({ ...prices, [brand]: formatted });
+    };
+
+    const handleFileChange = (brand: string, file: File | null) => {
+        if (file) {
+            setEvidenceFiles({ ...evidenceFiles, [brand]: file });
+        } else {
+            const newFiles = { ...evidenceFiles };
+            delete newFiles[brand];
+            setEvidenceFiles(newFiles);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,15 +58,24 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
                 }
             });
 
+            // Upload evidence files
+            const evidenceUrls: Record<string, string> = {};
+            for (const [brand, file] of Object.entries(evidenceFiles)) {
+                const url = await uploadFile(file);
+                evidenceUrls[brand] = url;
+            }
+
             await addPriceEntry({
                 distributor,
                 product: selectedProduct.name,
                 family: selectedProduct.family,
                 prices: numericPrices,
+                evidence: evidenceUrls,
             });
 
             setSuccess(true);
             setPrices({});
+            setEvidenceFiles({});
             setSelectedProduct(null);
             // Keep distributor selected for convenience
             setTimeout(() => setSuccess(false), 3000);
@@ -67,6 +87,8 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
             setLoading(false);
         }
     };
+
+
 
     return (
         <motion.div
@@ -137,19 +159,49 @@ export default function PriceForm({ onSuccess }: { onSuccess?: () => void }) {
                                     </span>
                                 )}
                             </label>
-                            <div className="relative">
+                            <div className="relative flex gap-2">
                                 <input
                                     type="text"
                                     placeholder="0,00"
                                     value={prices[brand] || ""}
                                     onChange={(e) => handlePriceChange(brand, e.target.value)}
                                     className={cn(
-                                        "w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 outline-none transition-all font-medium",
+                                        "flex-1 min-w-0 p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 outline-none transition-all font-medium",
                                         brand === "Guerra"
                                             ? "focus:ring-[#FACC15] border-yellow-400"
                                             : "focus:ring-[#FACC15]"
                                     )}
                                 />
+                                <div className="relative flex-shrink-0">
+                                    <input
+                                        type="file"
+                                        id={`file-${brand}`}
+                                        className="hidden"
+                                        accept="image/*,application/pdf"
+                                        onChange={(e) => handleFileChange(brand, e.target.files?.[0] || null)}
+                                    />
+                                    <label
+                                        htmlFor={`file-${brand}`}
+                                        className={cn(
+                                            "h-full aspect-square flex items-center justify-center rounded-xl border border-zinc-200 cursor-pointer transition-colors",
+                                            evidenceFiles[brand]
+                                                ? "bg-green-50 border-green-200 text-green-600"
+                                                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-400"
+                                        )}
+                                        title={evidenceFiles[brand] ? evidenceFiles[brand].name : "Anexar evidência"}
+                                    >
+                                        <Paperclip className="w-5 h-5" />
+                                    </label>
+                                    {evidenceFiles[brand] && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFileChange(brand, null)}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PriceEntry, deletePriceEntry } from "@/lib/firebase";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Paperclip } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 
 interface RecentRecordsTableProps {
@@ -54,6 +54,7 @@ export default function RecentRecordsTable({ entries, onDelete }: RecentRecordsT
                             <th className="px-6 py-4 font-medium">Randon</th>
                             <th className="px-6 py-4 font-medium">Facchini</th>
                             <th className="px-6 py-4 font-medium">Librelato</th>
+                            <th className="px-6 py-4 font-medium">Evidência</th>
                             <th className="px-6 py-4 font-medium">Ações</th>
                         </tr>
                     </thead>
@@ -66,16 +67,57 @@ export default function RecentRecordsTable({ entries, onDelete }: RecentRecordsT
                                 <td className="px-6 py-4 font-medium">{entry.distributor}</td>
                                 <td className="px-6 py-4 text-zinc-500">{entry.product}</td>
                                 <td className="px-6 py-4 text-[#D32F2F] font-medium">
-                                    {entry.prices.Guerra ? `R$ ${entry.prices.Guerra.toLocaleString()}` : '-'}
+                                    <div className="flex items-center gap-2">
+                                        {entry.prices.Guerra ? `R$ ${entry.prices.Guerra.toLocaleString()}` : '-'}
+                                        {entry.evidence?.Guerra && (
+                                            <a href={entry.evidence.Guerra} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-[#FACC15] transition-colors" title="Ver evidência">
+                                                <Paperclip className="w-4 h-4" />
+                                            </a>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    {entry.prices.Randon ? `R$ ${entry.prices.Randon.toLocaleString()}` : '-'}
+                                    <div className="flex items-center gap-2">
+                                        {entry.prices.Randon ? `R$ ${entry.prices.Randon.toLocaleString()}` : '-'}
+                                        {entry.evidence?.Randon && (
+                                            <a href={entry.evidence.Randon} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-[#FACC15] transition-colors" title="Ver evidência">
+                                                <Paperclip className="w-4 h-4" />
+                                            </a>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    {entry.prices.Facchini ? `R$ ${entry.prices.Facchini.toLocaleString()}` : '-'}
+                                    <div className="flex items-center gap-2">
+                                        {entry.prices.Facchini ? `R$ ${entry.prices.Facchini.toLocaleString()}` : '-'}
+                                        {entry.evidence?.Facchini && (
+                                            <a href={entry.evidence.Facchini} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-[#FACC15] transition-colors" title="Ver evidência">
+                                                <Paperclip className="w-4 h-4" />
+                                            </a>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     {entry.prices.Librelato ? `R$ ${entry.prices.Librelato.toLocaleString()}` : '-'}
+                                </td>
+                                <td className="px-6 py-4">
+                                    {entry.evidence && Object.keys(entry.evidence).length > 0 ? (
+                                        <div className="flex gap-2">
+                                            {Object.entries(entry.evidence).map(([brand, url]) => (
+                                                <a
+                                                    key={brand}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-1.5 bg-zinc-100 hover:bg-[#FACC15] text-zinc-500 hover:text-black rounded-lg transition-colors"
+                                                    title={`Ver evidência ${brand}`}
+                                                >
+                                                    <Paperclip className="w-4 h-4" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="text-zinc-300">-</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4">
                                     <button

@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, Timestamp, where, setDoc, doc, updateDoc } from "firebase/firestore";
 
 // REPLACE WITH YOUR FIREBASE CONFIG
@@ -15,6 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 export interface PriceEntry {
     id?: string;
@@ -23,6 +25,9 @@ export interface PriceEntry {
     family: string;
     prices: {
         [key: string]: number; // Brand -> Price
+    };
+    evidence?: {
+        [key: string]: string; // Brand -> URL
     };
     createdAt: any;
 }
@@ -186,12 +191,32 @@ export async function changePassword(userId: string, newPassword: string) {
         localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(updatedUsers));
         return;
     }
-
     try {
         const userRef = doc(db, USERS_COLLECTION, userId);
         await updateDoc(userRef, { password: newPassword });
     } catch (e) {
         console.error("Change password error:", e);
+        throw e;
+    }
+}
+
+export async function uploadFile(file: File): Promise<string> {
+    if (isMock) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    try {
+        const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (e) {
+        console.error("Error uploading file:", e);
         throw e;
     }
 }

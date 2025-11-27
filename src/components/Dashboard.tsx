@@ -41,6 +41,7 @@ export default function Dashboard({ entries }: { entries: PriceEntry[] }) {
                 Librelato: e.prices.Librelato || 0,
                 Truckvan: e.prices.Truckvan || 0,
                 Outros: e.prices.Outros || 0,
+                Evidência: e.evidence && Object.keys(e.evidence).length > 0 ? "Sim" : "Não",
             };
         });
 
