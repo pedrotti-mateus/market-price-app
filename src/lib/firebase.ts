@@ -201,7 +201,11 @@ export async function changePassword(userId: string, newPassword: string) {
 }
 
 export async function uploadEvidence(file: File): Promise<string> {
+    console.log("uploadEvidence called for:", file.name);
+    console.log("isMock:", isMock);
+
     if (isMock) {
+        console.log("Using Mock implementation for upload");
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -211,9 +215,17 @@ export async function uploadEvidence(file: File): Promise<string> {
     }
 
     try {
+        console.log("Starting Firebase upload...");
+        console.log("Storage Bucket:", firebaseConfig.storageBucket);
         const storageRef = ref(storage, `evidence/${Date.now()}_${file.name}`);
+        console.log("Storage Ref created:", storageRef.fullPath);
+
         const snapshot = await uploadBytes(storageRef, file);
+        console.log("Upload completed. Snapshot:", snapshot);
+
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("Download URL retrieved:", downloadURL);
+
         return downloadURL;
     } catch (e) {
         console.error("Error uploading file:", e);
