@@ -105,6 +105,8 @@ export default function Home() {
         <div className="flex justify-center p-12">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
+      ) : !user ? (
+        null // Don't render dashboard if not authenticated (redirecting...)
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
